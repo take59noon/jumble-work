@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>数学Ｃ 数式集</title>
+
+  <!-- スタイル -->
+  <link rel="stylesheet" href="assets/style.css">
+
+  <!-- KaTeX フォント設定 -->
+  <script>
+    window.WebFontConfig = {
+        custom: {
+        families: ['KaTeX_AMS', 'KaTeX_Caligraphic:n4,n7', 'KaTeX_Fraktur:n4,n7',
+            'KaTeX_Main:n4,n7,i4,i7', 'KaTeX_Math:i4,i7', 'KaTeX_Script',
+            'KaTeX_SansSerif:n4,n7,i4', 'KaTeX_Size1', 'KaTeX_Size2', 'KaTeX_Size3',
+            'KaTeX_Size4', 'KaTeX_Typewriter'],
+        },
+    };
+  </script>
+
+  <!-- KaTeX 本体 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- LaTeXでコピーできるようにする拡張 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.js"></script>
+
+  <!-- Markdown パーサ (marked) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- メインスクリプト -->
+  <script defer src="assets/main.js"></script>
+</head>
+
+<body data-page="mc">
+  <header class="site-header">
+    <h1>数学Ｃ 数式集</h1>
+    <nav class="breadcrumb"><a href="index.html">トップ</a> &gt; 数学Ｃ</nav>
+  </header>
+
+  <main class="layout">
+    <!-- 左カラム: 単元一覧 -->
+
+    <aside class="sidebar">
+      <h2>単元一覧</h2>
+
+      <div class="chapter-group">
+        <!-- 第1章 平面上のベクトル -->
+        <details open>
+          <summary>第1章 平面上のベクトル</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_01_vector_seibun.md">
+                ベクトルの表現，成分
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_02_vector_naiseki.md">
+                ベクトルの内積
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_03_vector_ichi.md">
+                位置ベクトル，ベクトルと図形
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_04_vector_houteisiki.md">
+                ベクトル方程式
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第2章 空間のベクトル -->
+        <details>
+          <summary>第2章 空間のベクトル</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_05_kakuritubunpu.md">
+                空間の座標
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_06_vector3_seibun.md">
+                空間のベクトル，空間ベクトルの成分
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_07_vector3_naiseki.md">
+                空間ベクトルの内積
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_08_vector3_ichi.md">
+                位置ベクトルと空間図形
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_09_kuukan_zukei.md">
+                座標空間における図形
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_10_kuukan_houteisiki.md">
+                平面の方程式，直線の方程式
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第3章 複素数平面 -->
+        <details>
+          <summary>第3章 複素数平面</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_11_hukusosu_heimen.md">
+                複素数平面
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_12_hukusosu_kyokukei.md">
+                極形式，ド・モアブルの定理
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_13_hukusosu_zukei1.md">
+                複素数と図形⑴
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_14_hukusosu_zukei2.md">
+                複素数と図形⑵
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第4章 式と曲線 -->
+        <details>
+          <summary>第4章 式と曲線</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_15_houbutu.md">
+                放物線
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_16_daen.md">
+                楕円
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_17_soukyokusen.md">
+                双曲線
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_18_kaiten.md">
+                2次曲線の平行移動，回転移動
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_19_2ji_seisitu.md">
+                2次曲線の性質
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_20_baikai.md">
+                曲線の媒介変数表示
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mc/mc_21_kyokuzahyou.md">
+                極座標と極方程式
+            </button></li>
+          </ul>
+        </details>
+        
+      </div>
+    </aside>
+
+    <!-- 右カラム: 公式表示部分 -->
+    <section class="content">
+      <h2 id="section-title">単元を選択してください</h2>
+      <div id="formula-container">
+        <p>左のリストから項目をクリックすると、対応する公式が表示されます。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター貼り付け -->
+  <script src="assets/footer-signature.js"></script>
+</body>
+</html>

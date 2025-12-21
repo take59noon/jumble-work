@@ -1,0 +1,288 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  line-height: 1.6;
+  background: #f7fafc;
+  color: #222;
+}
+
+/* 共通ヘッダー・フッター */
+
+.site-header {
+  background: #1a365d;
+  color: #fff;
+  padding: 1rem 1.5rem;
+}
+
+.site-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.site-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.site-footer {
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.8rem;
+  color: #4a5568;
+}
+
+/* パンくず */
+
+.breadcrumb a {
+  color: #cbd5f5;
+  text-decoration: underline;
+}
+
+.breadcrumb {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
+/* トップページ */
+
+.top-main {
+  padding: 1.5rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: block;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+}
+
+/* 数学ページの2カラムレイアウト */
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.sidebar {
+  background: #edf2f7;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.chapter-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chapter-list li + li {
+  margin-top: 0.5rem;
+}
+
+/* 章ボタン（アコーディオンっぽい見た目） */
+
+.chapter-btn {
+  width: 100%;
+  text-align: left;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.1s ease, transform 0.05s ease;
+}
+
+.chapter-btn:hover {
+  background: #cbd5e0;
+}
+
+.chapter-btn.active {
+  background: #ffe28a !important;   /* 明るい黄色 */
+  color: #333 !important;           /* 文字は濃い色で可読性UP */
+  font-weight: 600;
+}
+
+
+/* 章（第1章…）全体の余白・見た目 */
+.chapter-group details {
+  margin-bottom: 0.4rem;
+  background: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.4rem;
+}
+
+/* summary（第1章…）の表示 */
+.chapter-group summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+/* デフォルトの三角マーカーを消す */
+.chapter-group summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 自前の三角アイコン */
+.chapter-group summary::before {
+  content: "▶";
+  font-size: 0.7rem;
+  margin-right: 0.4rem;
+  transition: transform 0.15s ease;
+}
+
+/* 開いているときは三角を回転 */
+.chapter-group details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+/* 章の中のリストを少しインデント */
+.chapter-sublist {
+  margin: 0.3rem 0 0.2rem 1.2rem;
+}
+
+/* 下層ボタンは少し小さめに */
+.chapter-sublist .chapter-btn {
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  background: #f7fafc;
+}
+
+.chapter-sublist .chapter-btn:hover {
+  background: #e2e8f0;
+}
+
+
+/* 公式表示エリア */
+
+.content {
+  background: #fff;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  min-height: 60vh;
+}
+
+.content h2 {
+  margin-top: 0;
+}
+
+/* 読み込みエラー表示 */
+
+.error {
+  color: #e53e3e;
+  font-weight: bold;
+}
+
+/* レスポンシブ調整 */
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    order: 1;
+  }
+
+  .content {
+    order: 2;
+  }
+}
+
+/* KaTeX表示を少しだけ調整（お好みで） */
+
+.katex-display {
+  margin: 0.75rem 0;
+}
+
+/* ボタン行（右下寄せ） */
+.copy-btn-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+/* LaTeXコピー用ボタン */
+.copy-latex-btn {
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 0.4rem;
+  border: 1px solid #cbd5e0;
+  background: #edf2f7;
+  cursor: pointer;
+}
+
+.copy-latex-btn:hover {
+  background: #e2e8f0;
+}
+
+.copy-latex-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* KaTeX の √ グループ全体の右側(根号の外)に薄いスペースを足す */
+.katex .mord.sqrt {
+  margin-right: 0.07em;  /* 1/18em = 0.0555...em */
+}
+/* 根号（√）の「中身」の末尾にのみスペースを追加 */
+.katex .mord.sqrt .svg-align > .mord:last-child {
+  padding-right: 0.17em;  /* 「\,」は 3/18em = 0.1666...em */
+}
+
+/* KaTeX の分数横棒を完全に消す */
+.katex .frac-line {
+  border-bottom: none !important;   /* ← inline-style を上書き */
+  border-top: none !important;
+  height: 0 !important;
+  position: relative;
+}
+/* 自前の長い横棒を描く */
+.katex .frac-line::after {
+  content: "";
+  position: absolute;
+  left: -0.11em;                    /* 左に延長 */
+  right: -0.11em;                   /* 右に延長 */
+  top: 0;                           /* 元の位置と同じ高さ */
+  border-bottom: 0.04em solid currentColor;
+}

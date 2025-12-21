@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>数学Ⅱ 数式集</title>
+
+  <!-- スタイル -->
+  <link rel="stylesheet" href="assets/style.css">
+
+  <!-- KaTeX フォント設定 -->
+  <script>
+    window.WebFontConfig = {
+        custom: {
+        families: ['KaTeX_AMS', 'KaTeX_Caligraphic:n4,n7', 'KaTeX_Fraktur:n4,n7',
+            'KaTeX_Main:n4,n7,i4,i7', 'KaTeX_Math:i4,i7', 'KaTeX_Script',
+            'KaTeX_SansSerif:n4,n7,i4', 'KaTeX_Size1', 'KaTeX_Size2', 'KaTeX_Size3',
+            'KaTeX_Size4', 'KaTeX_Typewriter'],
+        },
+    };
+  </script>
+
+  <!-- KaTeX 本体 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- LaTeXでコピーできるようにする拡張 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.js"></script>
+
+  <!-- Markdown パーサ (marked) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- メインスクリプト -->
+  <script defer src="assets/main.js"></script>
+</head>
+
+<body data-page="m2">
+  <header class="site-header">
+    <h1>数学Ⅱ 数式集</h1>
+    <nav class="breadcrumb"><a href="index.html">トップ</a> &gt; 数学Ⅱ</nav>
+  </header>
+
+  <main class="layout">
+    <!-- 左カラム: 単元一覧 -->
+
+    <aside class="sidebar">
+      <h2>単元一覧</h2>
+
+      <div class="chapter-group">
+        <!-- 第1章 式と証明 -->
+        <details open>
+          <summary>第1章 式と証明</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_01_3ji_tenkai_insubunkai.md">
+                ３次式の展開と因数分解
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_02_nikouteiri.md">
+                二項定理
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_03_bunsusiki.md">
+                分数式とその計算
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_04_shoumei.md">
+                等式・不等式の証明
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第2章 複素数と方程式 -->
+        <details>
+          <summary>第2章 複素数と方程式</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_05_hukusosuu.md">
+                複素数
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_06_kaitokeisuu.md">
+                解と係数の関係
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_07_insuuteiri.md">
+                剰余の定理と因数定理・高次方程式
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第3章 図形と方程式 -->
+        <details>
+          <summary>第3章 図形と方程式</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_08_ten.md">
+                直線上の点・平面上の点
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_09_chokusen.md">
+                直線の方程式
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_10_en.md">
+                円の方程式
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_11_kiseki.md">
+                軌跡と方程式
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第4章 三角関数 -->
+        <details>
+          <summary>第4章 三角関数</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_12_kodohou.md">
+                一般角と弧度法・一般角の三角関数
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_13_sankaku_sougo.md">
+                三角関数の性質（変換）・相互関係
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_14_sankaku_graph.md">
+                三角関数のグラフ
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_15_kahouteiri.md">
+                加法定理
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_16_sankaku_gousei.md">
+                積と和の公式・三角関数の合成
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第5章 指数関数と対数関数 -->
+        <details>
+          <summary>第5章 指数関数と対数関数</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_17_sisuu.md">
+                指数の拡張
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_18_sisuu_kansuu.md">
+                指数関数
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_19_taisuu.md">
+                対数とその性質
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_20_taisuu_kansuu.md">
+                対数関数
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_21_joyo_taisuu.md">
+                常用対数
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第6章 微分法と積分法 -->
+        <details>
+          <summary>第6章 微分法と積分法</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/m2/m2_22_doukansuu.md">
+                微分係数，導関数
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_23_sessen.md">
+                接線
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_24_hutei_sekibun.md">
+                不定積分
+            </button></li>
+            <li><button class="chapter-btn" data-md="data/m2/m2_25_tei_sekibun.md">
+                定積分
+            </button></li>
+          </ul>
+        </details>
+
+      </div>
+    </aside>
+
+    <!-- 右カラム: 公式表示部分 -->
+    <section class="content">
+      <h2 id="section-title">単元を選択してください</h2>
+      <div id="formula-container">
+        <p>左のリストから項目をクリックすると、対応する公式が表示されます。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター貼り付け -->
+  <script src="assets/footer-signature.js"></script>
+</body>
+</html>

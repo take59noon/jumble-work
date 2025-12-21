@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>数学Ｂ 数式集</title>
+
+  <!-- スタイル -->
+  <link rel="stylesheet" href="assets/style.css">
+
+  <!-- KaTeX フォント設定 -->
+  <script>
+    window.WebFontConfig = {
+        custom: {
+        families: ['KaTeX_AMS', 'KaTeX_Caligraphic:n4,n7', 'KaTeX_Fraktur:n4,n7',
+            'KaTeX_Main:n4,n7,i4,i7', 'KaTeX_Math:i4,i7', 'KaTeX_Script',
+            'KaTeX_SansSerif:n4,n7,i4', 'KaTeX_Size1', 'KaTeX_Size2', 'KaTeX_Size3',
+            'KaTeX_Size4', 'KaTeX_Typewriter'],
+        },
+    };
+  </script>
+
+  <!-- KaTeX 本体 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- LaTeXでコピーできるようにする拡張 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.js"></script>
+
+  <!-- Markdown パーサ (marked) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- メインスクリプト -->
+  <script defer src="assets/main.js"></script>
+</head>
+
+<body data-page="mb">
+  <header class="site-header">
+    <h1>数学Ｂ 数式集</h1>
+    <nav class="breadcrumb"><a href="index.html">トップ</a> &gt; 数学Ｂ</nav>
+  </header>
+
+  <main class="layout">
+    <!-- 左カラム: 単元一覧 -->
+
+    <aside class="sidebar">
+      <h2>単元一覧</h2>
+
+      <div class="chapter-group">
+        <!-- 第1章 数列 -->
+        <details open>
+          <summary>第1章 数列</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_01_tousa.md">
+                等差数列
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_02_touhi.md">
+                等比数列
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_03_sigma.md">
+                和の記号Σ，階差数列
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_04_iroironawa.md">
+                いろいろな数列の和
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_05_zenkasiki.md">
+                漸化式と数列
+            </button></li>
+          </ul>
+        </details>
+
+        <!-- 第2章 統計的な推測 -->
+        <details>
+          <summary>第2章 統計的な推測質</summary>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_06_kakuritubunpu.md">
+                確率変数と確率分布，期待値，分散
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_07_hensuu_henkan.md">
+                確率変数の変換，和と期待値，独立
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_08_nikou_seiki.md">
+                二項分布と正規分布
+            </button></li>
+          </ul>
+          <ul class="chapter-list chapter-sublist">
+            <li><button class="chapter-btn" data-md="data/mb/mb_09_suitei.md">
+                標本平均とその分布，推定
+            </button></li>
+          </ul>
+
+        </details>
+      </div>
+    </aside>
+
+    <!-- 右カラム: 公式表示部分 -->
+    <section class="content">
+      <h2 id="section-title">単元を選択してください</h2>
+      <div id="formula-container">
+        <p>左のリストから項目をクリックすると、対応する公式が表示されます。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター貼り付け -->
+  <script src="assets/footer-signature.js"></script>
+</body>
+</html>

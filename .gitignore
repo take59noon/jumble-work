@@ -131,3 +131,5 @@ dmypy.json
 # Private
 memo/
 app.py
+jumble_work/math_fomula/trash/
+jumble_work/math_fomula/app.py
