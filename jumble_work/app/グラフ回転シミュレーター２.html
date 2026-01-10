@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revolve Graph 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; color: white; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        .overlay {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        input[type="text"], input[type="number"] {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        
+        /* 無効状態のスタイル */
+        .disabled-group {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/"
+        }
+      }
+    </script>
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, { delimiters: [{left: '$', right: '$', display: false}] });
+        });
+    </script>
+</head>
+<body>
+
+    <!-- Control Panel -->
+    <div class="overlay top-0 left-0 p-4 w-80 max-w-full flex flex-col gap-4 max-h-screen overflow-y-auto">
+        <div class="bg-slate-900/90 p-5 rounded-xl border border-slate-700 backdrop-blur-md shadow-2xl interactive">
+            <h1 class="text-lg font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                グラフ回転シミュレーター２
+            </h1>
+            <p class="text-xs text-slate-400 mb-4 -mt-2">グラフを回転したときの軌跡を表示します。</p>
+            
+            <div class="mb-4">
+                <div class="flex-col justify-between items-end mb-1">
+                    <label class="block text-xs text-slate-400 font-bold">数式の入力（陰関数OK, 入力なしOK）</label>
+                    <label class="block text-xs text-slate-400">※「-x」は「-1*x」と入力</label>
+                </div>
+                
+                <div class="space-y-3">
+                    <!-- Input 1 -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-2 h-2 rounded-full bg-orange-300"></div>
+                            <span class="text-[10px] text-orange-200">数式 1 (オレンジ色)</span>
+                        </div>
+                        <input type="text" id="func1" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none text-cyan-100 placeholder-slate-600"
+                            value="y = -1*x^2 + 3">
+                    </div>
+                    <!-- Input 2 -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-2 h-2 rounded-full bg-cyan-500"></div>
+                            <span class="text-[10px] text-cyan-200">数式 2 (水色)</span>
+                        </div>
+                        <input type="text" id="func2" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none text-cyan-100 placeholder-slate-600"
+                            value="y = -2*x">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rotation Axis & Range -->
+            <div class="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                <label class="block text-xs text-slate-400 font-bold mb-3">回転軸と計算範囲</label>
+                
+                <!-- X Axis Group -->
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer mb-2">
+                        <input type="radio" name="axis" value="x" checked class="accent-cyan-500" onchange="updateUIState()">
+                        <span class="text-xs text-slate-200 font-bold">X軸まわり</span>
+                    </label>
+                    <div id="group-x" class="pl-6 flex items-center gap-2 transition-opacity">
+                        <span class="text-[10px] text-slate-400 whitespace-nowrap">Xの範囲:</span>
+                        <input type="number" id="input-x-min" value="0" step="1"
+                            class="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-center focus:border-cyan-500 text-white">
+                        <span class="text-slate-500 text-xs">～</span>
+                        <input type="number" id="input-x-max" value="3" step="1"
+                            class="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-center focus:border-cyan-500 text-white">
+                    </div>
+                </div>
+
+                <!-- Y Axis Group -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer mb-2">
+                        <input type="radio" name="axis" value="y" class="accent-cyan-500" onchange="updateUIState()">
+                        <span class="text-xs text-slate-200 font-bold">Y軸まわり</span>
+                    </label>
+                    <div id="group-y" class="pl-6 flex items-center gap-2 transition-opacity disabled-group">
+                        <span class="text-[10px] text-slate-400 whitespace-nowrap">Yの範囲:</span>
+                        <input type="number" id="input-y-min" value="0" step="1" disabled
+                            class="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-center focus:border-cyan-500 text-white">
+                        <span class="text-slate-500 text-xs">～</span>
+                        <input type="number" id="input-y-max" value="3" step="1" disabled
+                            class="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-center focus:border-cyan-500 text-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Options -->
+            <div class="mb-6 space-y-2">
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-xs text-slate-400">解像度</span>
+                    <input type="range" id="resolution" min="20" max="200" value="120" class="w-24 accent-cyan-500">
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="check-wireframe" checked class="accent-cyan-500">
+                    <span class="text-xs text-slate-300">ワイヤーフレーム表示</span>
+                </label>
+            </div>
+
+            <button onclick="updateGeometry()" 
+                class="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-white font-bold shadow-lg transition-all active:scale-95">
+                更新
+            </button>
+
+            <div id="error-msg" class="mt-3 text-red-300 text-xs hidden bg-red-900/20 p-3 rounded border border-red-800/50"></div>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 backdrop-blur-sm text-[10px] text-slate-400 interactive">
+            <p class="mb-2">※ 軸の色: <span class="text-red-400">赤(X)</span> <span class="text-green-400">緑(Y)</span> <span class="text-blue-400">青(Z)</span></p>
+            <div class="border-t border-slate-600 pt-2">
+                <p class="font-bold mb-1 text-slate-300">入力例:</p>
+                <ul class="list-disc list-inside space-y-0.5 font-mono text-slate-300 opacity-80">
+                    <li><span style="padding-right: 2em;">x^2 + y^2 = 4</span> (方程式 $x^2+y^2=1$ )</li>
+                    <li><span style="padding-right: 4.25em;">y = sin(x)</span>(関数 $y=\sin{x}$ )</li>
+                    <li><span style="padding-right: 1em;">y = -1/2*x*(x-2)</span>(関数 $y=-\frac12 x(x-2)$ )</li>
+                </ul>
+            </div>
+            <!-- チートシート -->
+            <div class="border-t border-slate-600 pt-2 mt-2">
+                <p class="font-bold mb-1 text-slate-300">関数チートシート:</p>
+                <table class="w-full text-slate-300 opacity-90 border-collapse">
+                    <tbody class="divide-y divide-slate-700/50">
+                        <tr>
+                            <td class="py-1 pr-2">$\sqrt{x}$</td><td class="py-1 font-mono text-orange-200">sqrt(x)</td>
+                            <td class="py-1 px-2 border-l border-slate-700/50">$\pi$</td><td class="py-1 font-mono text-orange-200">acos(-1)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-2">$\log{x}$</td><td class="py-1 font-mono text-orange-200">log(x)</td>
+                            <td class="py-1 px-2 border-l border-slate-700/50">$\log_{2}{x}$</td><td class="py-1 font-mono text-orange-200">log2(x)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-2">$e^x$</td><td class="py-1 font-mono text-orange-200">exp(x)</td>
+                            <td class="py-1 px-2 border-l border-slate-700/50">$e$</td><td class="py-1 font-mono text-orange-200">exp(1)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        let scene, camera, renderer, controls;
+        let axisHelper;
+        let meshes = [];
+
+        // Colors
+        // F1: 薄いオレンジ (Light Orange/Cream)
+        const COLOR_F1 = 0xffdca0; 
+        // F2: 水色 (Cyan)
+        const COLOR_F2 = 0x00ccff; 
+
+        init();
+        animate();
+        // UI初期状態設定
+        updateUIState();
+        setTimeout(updateGeometry, 100);
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(10, 10, 15);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.logarithmicDepthBuffer = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const ambientLight = new THREE.AmbientLight(0x606060);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+            const pointLight = new THREE.PointLight(0xffaa00, 0.8, 100);
+            pointLight.position.set(-10, 5, 10);
+            scene.add(pointLight);
+
+            const gridHelper = new THREE.GridHelper(20, 20, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+            const gridHelperXY = new THREE.GridHelper(20, 20, 0x334155, 0x1e293b);
+            gridHelperXY.rotation.x = Math.PI / 2;
+            scene.add(gridHelperXY);
+            axisHelper = new THREE.AxesHelper(15);
+            scene.add(axisHelper);
+
+            window.addEventListener('resize', onWindowResize);
+            
+            window.updateGeometry = updateGeometry;
+            window.updateUIState = updateUIState;
+        }
+
+        function updateUIState() {
+            const axis = document.querySelector('input[name="axis"]:checked').value;
+            const groupX = document.getElementById('group-x');
+            const groupY = document.getElementById('group-y');
+            const inputsX = groupX.querySelectorAll('input');
+            const inputsY = groupY.querySelectorAll('input');
+
+            if (axis === 'x') {
+                groupX.classList.remove('disabled-group');
+                groupY.classList.add('disabled-group');
+                inputsX.forEach(i => i.disabled = false);
+                inputsY.forEach(i => i.disabled = true);
+            } else {
+                groupX.classList.add('disabled-group');
+                groupY.classList.remove('disabled-group');
+                inputsX.forEach(i => i.disabled = true);
+                inputsY.forEach(i => i.disabled = false);
+            }
+        }
+
+        // --- Implicit Equation Parser (f(x,y)=0) ---
+        function compileImplicitFunction(expr) {
+            let code = expr.toLowerCase().replace(/\s+/g, '');
+            
+            if (code.includes('=')) {
+                const parts = code.split('=');
+                if (parts.length !== 2) throw new Error("等号(=)は1つだけ使えます");
+                code = `(${parts[0]}) - (${parts[1]})`;
+            }
+
+            code = code.replace(/\^/g, '**');
+            const mathProps = Object.getOwnPropertyNames(Math);
+            mathProps.forEach(prop => {
+                const regex = new RegExp(`\\b${prop}\\b`, 'g');
+                code = code.replace(regex, `Math.${prop}`);
+            });
+            
+            try {
+                const f = new Function('x', 'y', `return ${code};`);
+                f(0, 0); 
+                return f;
+            } catch (e) {
+                throw new Error("数式の構文エラー");
+            }
+        }
+
+        // --- Marching Squares Algorithm ---
+        function marchingSquares(func, xMin, xMax, yMin, yMax, res) {
+            const segments = [];
+            const dx = (xMax - xMin) / res;
+            const dy = (yMax - yMin) / res;
+            
+            const grid = new Float32Array((res + 1) * (res + 1));
+            for (let j = 0; j <= res; j++) {
+                const y = yMin + j * dy;
+                for (let i = 0; i <= res; i++) {
+                    const x = xMin + i * dx;
+                    let val = 0;
+                    try { val = func(x, y); } catch(e) {}
+                    if (!isFinite(val)) val = 1e9;
+                    grid[j * (res + 1) + i] = val;
+                }
+            }
+
+            function lerp(v0, v1, t0, t1) {
+                if (Math.abs(v1 - v0) < 1e-9) return 0.5;
+                return (0 - v0) / (v1 - v0);
+            }
+
+            for (let j = 0; j < res; j++) {
+                for (let i = 0; i < res; i++) {
+                    const idx = j * (res + 1) + i;
+                    const v0 = grid[idx]; const v1 = grid[idx + 1];
+                    const v2 = grid[idx + (res + 1) + 1]; const v3 = grid[idx + (res + 1)];
+                    let state = 0;
+                    if (v0 > 0) state |= 1; if (v1 > 0) state |= 2;
+                    if (v2 > 0) state |= 4; if (v3 > 0) state |= 8;
+                    const cellX = xMin + i * dx; const cellY = yMin + j * dy;
+                    const pB = { x: cellX + dx * lerp(v0, v1, 0, 1), y: cellY };
+                    const pR = { x: cellX + dx, y: cellY + dy * lerp(v1, v2, 0, 1) };
+                    const pT = { x: cellX + dx * lerp(v3, v2, 0, 1), y: cellY + dy };
+                    const pL = { x: cellX, y: cellY + dy * lerp(v0, v3, 0, 1) };
+
+                    switch (state) {
+                        case 1: segments.push([pL, pB]); break; case 2: segments.push([pB, pR]); break;
+                        case 3: segments.push([pL, pR]); break; case 4: segments.push([pR, pT]); break;
+                        case 5: segments.push([pL, pT]); segments.push([pB, pR]); break;
+                        case 6: segments.push([pB, pT]); break; case 7: segments.push([pL, pT]); break;
+                        case 8: segments.push([pT, pL]); break; case 9: segments.push([pT, pB]); break;
+                        case 10: segments.push([pB, pL]); segments.push([pT, pR]); break;
+                        case 11: segments.push([pT, pR]); break; case 12: segments.push([pR, pL]); break;
+                        case 13: segments.push([pR, pB]); break; case 14: segments.push([pB, pL]); break;
+                    }
+                }
+            }
+            return segments;
+        }
+
+        // --- Build Solid from Implicit Segments ---
+        function createSolidFromSegments(segments, axis, res) {
+            const vertices = [];
+            const indices = [];
+            const stepsV = Math.floor(res * 1.5);
+            let vertIdx = 0;
+
+            segments.forEach(seg => {
+                const p1 = seg[0];
+                const p2 = seg[1];
+
+                for (let j = 0; j <= stepsV; j++) {
+                    const v = j / stepsV;
+                    const theta = v * Math.PI * 2;
+                    const cos = Math.cos(theta);
+                    const sin = Math.sin(theta);
+
+                    if (axis === 'x') {
+                        vertices.push(p1.x, p1.y * cos, p1.y * sin);
+                        vertices.push(p2.x, p2.y * cos, p2.y * sin);
+                    } else {
+                        // Baumkuchen for implicit: Rotate (x, y) around Y axis
+                        // Radius = x. Height = y.
+                        vertices.push(p1.x * cos, p1.y, p1.x * sin);
+                        vertices.push(p2.x * cos, p2.y, p2.x * sin);
+                    }
+                }
+
+                for (let j = 0; j < stepsV; j++) {
+                    const base = vertIdx + j * 2;
+                    const a = base;
+                    const b = base + 1;
+                    const c = base + 3;
+                    const d = base + 2;
+                    indices.push(a, b, d);
+                    indices.push(b, c, d);
+                }
+                vertIdx += (stepsV + 1) * 2;
+            });
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            return geometry;
+        }
+
+        // --- Helper: Profile Line (Implicit) ---
+        function createImplicitProfile(segments, color) {
+            const points = [];
+            segments.forEach(s => {
+                points.push(new THREE.Vector3(s[0].x, s[0].y, 0));
+                points.push(new THREE.Vector3(s[1].x, s[1].y, 0));
+            });
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const mat = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            const line = new THREE.LineSegments(geo, mat);
+            line.position.z = 0.02;
+            return line;
+        }
+
+        function updateGeometry() {
+            // Cleanup
+            meshes.forEach(m => {
+                if(m.solid) { scene.remove(m.solid); m.solid.geometry.dispose(); } // Materials shared, don't dispose
+                if(m.line) { scene.remove(m.line); m.line.geometry.dispose(); m.line.material.dispose(); }
+                if(m.wireframe) { scene.remove(m.wireframe); m.wireframe.geometry.dispose(); m.wireframe.material.dispose(); }
+            });
+            meshes = [];
+
+            const axis = document.querySelector('input[name="axis"]:checked').value;
+            
+            // 範囲の取得（選択された軸以外はデフォルト値を使う）
+            let xMin, xMax, yMin, yMax;
+            
+            if (axis === 'x') {
+                xMin = parseFloat(document.getElementById('input-x-min').value);
+                xMax = parseFloat(document.getElementById('input-x-max').value);
+                // 陰関数描画用のY範囲（十分広めに固定）
+                yMin = -10; 
+                yMax = 10;
+            } else {
+                // 陰関数描画用のX範囲（十分広めに固定）
+                xMin = -10;
+                xMax = 10;
+                yMin = parseFloat(document.getElementById('input-y-min').value);
+                yMax = parseFloat(document.getElementById('input-y-max').value);
+            }
+
+            const resolution = parseInt(document.getElementById('resolution').value);
+            const showWireframe = document.getElementById('check-wireframe').checked;
+            const errorBox = document.getElementById('error-msg');
+            
+            errorBox.classList.add('hidden');
+
+            const f1Str = document.getElementById('func1').value.trim();
+            const f2Str = document.getElementById('func2').value.trim();
+
+            try {
+                // Try Implicit for all
+                let f1Imp = f1Str ? compileImplicitFunction(f1Str) : null;
+                let f2Imp = f2Str ? compileImplicitFunction(f2Str) : null;
+
+                const mat1 = new THREE.MeshStandardMaterial({
+                    color: COLOR_F1, side: THREE.DoubleSide, roughness: 0.3, metalness: 0.1,
+                    transparent: true, opacity: 0.3, flatShading: false, depthWrite: false
+                });
+                const mat2 = new THREE.MeshStandardMaterial({
+                    color: COLOR_F2, side: THREE.DoubleSide, roughness: 0.3, metalness: 0.1,
+                    transparent: true, opacity: 0.5, flatShading: false, depthWrite: false
+                });
+
+                const drawSolid = (fImp, color, mat) => {
+                    const segments = marchingSquares(fImp, xMin, xMax, yMin, yMax, resolution);
+                    if (segments.length > 0) {
+                        const geo = createSolidFromSegments(segments, axis, resolution);
+                        const m = new THREE.Mesh(geo, mat);
+                        scene.add(m);
+
+                        let w = null;
+                        if (showWireframe) {
+                            const wGeo = new THREE.WireframeGeometry(geo);
+                            const wMat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.15, transparent: true });
+                            w = new THREE.LineSegments(wGeo, wMat);
+                            scene.add(w);
+                        }
+                        meshes.push({solid:m, wireframe:w});
+
+                        const l = createImplicitProfile(segments, color);
+                        scene.add(l); meshes.push({line:l});
+                    }
+                };
+
+                if (f1Str && f1Imp) drawSolid(f1Imp, COLOR_F1, mat1);
+                if (f2Str && f2Imp) drawSolid(f2Imp, COLOR_F2, mat2);
+
+            } catch (err) {
+                console.error(err);
+                errorBox.innerHTML = `
+                    <p class="font-bold">エラー: ${err.message}</p>
+                    <div class="mt-2 pt-2 border-t border-red-800/50 text-[10px]">
+                        <p class="mb-1">下の入力例を確認してください。</p>
+                    </div>
+                `;
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

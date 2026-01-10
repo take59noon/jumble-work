@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMIDA KUJI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        }
+        canvas {
+            cursor: crosshair;
+            touch-action: none;
+            display: block; /* 余計な空白除去 */
+        }
+        /* 要素の配置を制御するクラス */
+        .item-label-wrapper {
+            position: absolute;
+            transform: translateX(-50%); /* 中心を基準点に合わせる */
+            white-space: nowrap;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-10 px-4">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-6 md:p-10">
+        <h1 class="text-3xl font-black text-center text-slate-800 mb-8">あみだくじ</h1>
+
+        <!-- Setup Section -->
+        <div id="setup-section" class="mb-10">
+            <label class="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">参加者・要素を入力して［作成］！　（カンマ区切り「，」「,」「、」）</label>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="items-input" 
+                    placeholder="例: たなか、さとう、すずき、やまだ" 
+                    class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                    value="A, B, C, D">
+                <button onclick="initLadder()" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-100">
+                    作成
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">※ 2名から10名程度がおすすめです。</p>
+        </div>
+
+        <!-- Ladder Section -->
+        <div id="ladder-container" class="hidden">
+            <div class="flex flex-col items-center gap-4 mb-4">
+                <div class="flex justify-center gap-4">
+                    <button id="start-btn" onclick="startAmida()" class="px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+                        <span>🚀</span> あみだ開始
+                    </button>
+                    <button onclick="resetRungs()" class="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-all">
+                        線をリセット
+                    </button>
+                </div>
+                <p class="text-center text-sm text-indigo-600 font-bold italic">
+                    縦線の間をクリックして横棒を引こう。<br>横棒を引き終わったら［あみだ開始］！
+                </p>
+            </div>
+
+            <!-- スクロールエリア -->
+            <div class="overflow-x-auto pb-10 w-full flex justify-center">
+                <div id="ladder-ui" class="relative">
+                    <!-- Names at top -->
+                    <div id="labels-top" class="relative h-12 w-full mb-2"></div>
+                    
+                    <!-- Drawing Canvas -->
+                    <canvas id="ladder-canvas"></canvas>
+
+                    <!-- Prizes at bottom -->
+                    <div id="labels-bottom" class="relative h-12 w-full mt-4"></div>
+                </div>
+            </div>
+            
+            <p class="text-center text-sm text-slate-500 mt-6 bg-slate-50 py-3 rounded-xl">
+                💡 結果のテキストボックスに「当たり」や「罰ゲーム」などを自由に書き込めます。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let rungs = []; // { y: number, col: number }
+        let isAnimating = false;
+        let activePaths = [];
+
+        const canvas = document.getElementById('ladder-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('ladder-container');
+        const ladderUi = document.getElementById('ladder-ui');
+        const topLabels = document.getElementById('labels-top');
+        const bottomLabels = document.getElementById('labels-bottom');
+
+        const LINE_COLOR = '#e2e8f0';
+        const RUNG_COLOR = '#64748b';
+        const PATH_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+        
+        const LINE_SPACING = 100;
+        const LADDER_HEIGHT = 400;
+        const PADDING_X = 60; 
+
+        function initLadder() {
+            const input = document.getElementById('items-input').value;
+            items = input.split(/[,，、]/).map(s => s.trim()).filter(s => s !== "");
+            
+            if (items.length < 2) {
+                alert("2つ以上の要素を入力してください。");
+                return;
+            }
+
+            rungs = [];
+            isAnimating = false;
+            activePaths = [];
+            
+            container.classList.remove('hidden');
+            setupUI();
+            draw();
+        }
+
+        function setupUI() {
+            const totalWidth = (items.length - 1) * LINE_SPACING + PADDING_X * 2;
+            
+            ladderUi.style.width = totalWidth + 'px';
+            canvas.width = totalWidth;
+            canvas.height = LADDER_HEIGHT;
+
+            topLabels.innerHTML = '';
+            bottomLabels.innerHTML = '';
+
+            items.forEach((item, i) => {
+                const xPos = getX(i);
+                // 各アイテムに対応する色を取得
+                const itemColor = PATH_COLORS[i % PATH_COLORS.length];
+
+                // Top Label
+                const topWrapper = document.createElement('div');
+                topWrapper.className = 'item-label-wrapper';
+                topWrapper.style.left = xPos + 'px';
+                
+                const top = document.createElement('div');
+                // text-slate-700 を削除し、style.colorで色を指定
+                top.className = 'font-black text-lg bg-white/90 px-2 rounded border-2'; 
+                top.style.color = itemColor;
+                top.style.borderColor = itemColor; // 枠線も同じ色に
+                top.innerText = item;
+                
+                topWrapper.appendChild(top);
+                topLabels.appendChild(topWrapper);
+
+                // Bottom Prize Input
+                const bottomWrapper = document.createElement('div');
+                bottomWrapper.className = 'item-label-wrapper';
+                bottomWrapper.style.left = xPos + 'px';
+
+                const bottom = document.createElement('input');
+                bottom.type = 'text';
+                bottom.placeholder = `結果${i+1}`;
+                bottom.className = 'w-24 px-2 py-2 text-center text-sm border-b-2 border-slate-200 focus:border-indigo-400 outline-none transition-colors font-medium bg-transparent';
+                
+                bottomWrapper.appendChild(bottom);
+                bottomLabels.appendChild(bottomWrapper);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Vertical Lines
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            for (let i = 0; i < items.length; i++) {
+                const x = getX(i);
+                ctx.beginPath();
+                ctx.strokeStyle = LINE_COLOR;
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, LADDER_HEIGHT);
+                ctx.stroke();
+            }
+
+            // Draw Rungs
+            ctx.strokeStyle = RUNG_COLOR;
+            ctx.lineWidth = 4;
+            rungs.forEach(rung => {
+                const x1 = getX(rung.col);
+                const x2 = getX(rung.col + 1);
+                ctx.beginPath();
+                ctx.moveTo(x1, rung.y);
+                ctx.lineTo(x2, rung.y);
+                ctx.stroke();
+            });
+
+            // Draw Active Paths
+            if (activePaths.length > 0) {
+                activePaths.forEach((path, i) => {
+                    ctx.strokeStyle = PATH_COLORS[i % PATH_COLORS.length];
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    
+                    const p = path.currentPos;
+                    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.fill();
+
+                    // Draw trail
+                    ctx.beginPath();
+                    if (path.history.length > 0) {
+                        ctx.moveTo(path.history[0].x, path.history[0].y);
+                        for (let j = 1; j < path.history.length; j++) {
+                            ctx.lineTo(path.history[j].x, path.history[j].y);
+                        }
+                    }
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function getX(colIndex) {
+            return PADDING_X + colIndex * LINE_SPACING;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (isAnimating) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            for (let i = 0; i < items.length - 1; i++) {
+                const xStart = getX(i);
+                const xEnd = getX(i + 1);
+                if (mouseX > xStart + 15 && mouseX < xEnd - 15) {
+                    addRung(i, mouseY);
+                    break;
+                }
+            }
+        });
+
+        function addRung(col, y) {
+            const isTooClose = rungs.some(r => r.col === col && Math.abs(r.y - y) < 20);
+            if (!isTooClose) {
+                rungs.push({ col, y });
+                draw();
+            }
+        }
+
+        function resetRungs() {
+            if (isAnimating) return;
+            rungs = [];
+            activePaths = [];
+            draw();
+        }
+
+        function startAmida() {
+            if (isAnimating) return;
+            isAnimating = true;
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('start-btn').classList.add('opacity-50');
+
+            activePaths = items.map((_, i) => ({
+                startCol: i,
+                currentCol: i,
+                currentY: 0,
+                currentPos: { x: getX(i), y: 0 },
+                history: [{ x: getX(i), y: 0 }],
+                finished: false,
+                targetX: null // 横移動の目標X座標
+            }));
+
+            animate();
+        }
+
+        function animate() {
+            let allFinished = true;
+            const baseSpeed = 2;
+            const horizontalSpeed = baseSpeed * 2; // 横移動は3倍速
+
+            activePaths.forEach(path => {
+                if (path.finished) return;
+                allFinished = false;
+
+                // --- 横移動モード ---
+                if (path.targetX !== null) {
+                    const dx = path.targetX - path.currentPos.x;
+                    const distance = Math.abs(dx);
+
+                    if (distance <= horizontalSpeed) {
+                        // 目標に到達
+                        path.currentPos.x = path.targetX;
+                        path.targetX = null;
+                        // 論理的なカラム位置を更新
+                        path.currentCol = Math.round((path.currentPos.x - PADDING_X) / LINE_SPACING);
+                        // 角を履歴に追加
+                        path.history.push({ x: path.currentPos.x, y: path.currentPos.y });
+                    } else {
+                        // 目標に向かって進む
+                        path.currentPos.x += Math.sign(dx) * horizontalSpeed;
+                    }
+                } 
+                // --- 縦移動モード ---
+                else {
+                    let nextY = path.currentY + baseSpeed;
+
+                    // 終了判定
+                    if (nextY >= LADDER_HEIGHT) {
+                        path.currentY = LADDER_HEIGHT;
+                        path.currentPos.y = LADDER_HEIGHT;
+                        path.finished = true;
+                        path.history.push({ x: path.currentPos.x, y: LADDER_HEIGHT });
+                        return;
+                    }
+
+                    // 横棒の判定
+                    const rung = rungs.find(r => 
+                        r.y > path.currentY && r.y <= nextY &&
+                        (r.col === path.currentCol || r.col === path.currentCol - 1)
+                    );
+
+                    if (rung) {
+                        // 横棒に到達
+                        path.currentY = rung.y;
+                        path.currentPos.y = rung.y;
+                        path.history.push({ x: path.currentPos.x, y: path.currentPos.y });
+
+                        // 横移動の目標を設定
+                        if (rung.col === path.currentCol) {
+                            path.targetX = getX(path.currentCol + 1); // 右へ
+                        } else {
+                            path.targetX = getX(path.currentCol - 1); // 左へ
+                        }
+                    } else {
+                        // そのまま下へ
+                        path.currentY = nextY;
+                        path.currentPos.y = nextY;
+                    }
+                }
+            });
+
+            draw();
+
+            if (!allFinished) {
+                requestAnimationFrame(animate);
+            } else {
+                isAnimating = false;
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('start-btn').classList.remove('opacity-50');
+            }
+        }
+
+        window.onload = initLadder;
+    </script>
+</body>
+</html>

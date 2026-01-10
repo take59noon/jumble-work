@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rectangular Cuboid Slicer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: white; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; cursor: default; }
+        .overlay {
+            position: absolute;
+            pointer-events: none; /* 下のCanvasをクリック可能にする */
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        /* カーソル制御用クラス */
+        .cursor-none {
+            cursor: none !important;
+        }
+        /* ドラッグ中のカーソル */
+        .grabbing {
+            cursor: grabbing !important;
+        }
+        input[type="number"] {
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #555;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+            width: 50px;
+            text-align: center;
+        }
+    </style>
+    <!-- Three.js & OrbitControls -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+
+    <!-- UI Overlay -->
+    <div class="overlay top-0 left-0 p-4 w-full flex flex-row items-start gap-4 flex-wrap">
+        
+        <!-- 1. 左側: 設定・説明ブロック -->
+        <div class="bg-black/70 p-4 rounded-lg border border-gray-600 backdrop-blur-sm max-w-sm interactive">
+            <h1 class="text-xl font-bold mb-3">直方体の切断シミュレーター</h1>
+            
+            <!-- サイズ設定エリア -->
+            <div class="mb-4 bg-gray-800/50 p-3 rounded border border-gray-700">
+                <div class="flex items-center gap-2 text-sm mb-2">
+                    <label>縦(Z): <input type="number" id="input-depth" value="6" min="1" max="10"></label>
+                    <label>横(X): <input type="number" id="input-width" value="6" min="1" max="10"></label>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <label>高さ(Y): <input type="number" id="input-height" value="6" min="1" max="10"></label>
+                    <button onclick="updateBoxDimensions()" class="ml-auto px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-bold transition">
+                        サイズ更新
+                    </button>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-300 mb-2 leading-relaxed">
+                1. <span class="text-cyan-400 font-bold">辺</span> または <span class="text-pink-400 font-bold">頂点</span> をクリックして3点指定<br>
+                2. 点はドラッグで移動可能<br>
+                3. 「切断」で断面を表示<br>
+                4. 「＋」で断面を残して次を追加<br>
+            </p>
+        </div>
+
+        <!-- 2. 右側: 操作パネル -->
+        <div class="flex flex-col gap-2 interactive">
+            
+            <!-- 上段: 状態表示とアクション -->
+            <div class="bg-black/70 p-3 rounded-lg border border-gray-600 backdrop-blur-sm flex items-center gap-3">
+                <div class="text-lg font-bold whitespace-nowrap mr-2">
+                    選択: <span id="point-count" class="text-yellow-400">0</span> / 3
+                </div>
+                
+                <!-- 切断ボタン（青） -->
+                <button onclick="performCut()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white font-bold transition shadow-lg shadow-blue-900/50">
+                    切断
+                </button>
+
+                <!-- リセットボタン（グレー） -->
+                <button onclick="resetAll()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-white font-bold transition shadow-lg shadow-gray-900/50">
+                    全消去
+                </button>
+            </div>
+
+            <!-- 下段: ＋ボタン -->
+            <button id="btn-add-cut" onclick="addNewCut()" disabled class="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:border disabled:border-gray-700 disabled:cursor-not-allowed rounded-lg text-white font-bold transition shadow-lg flex justify-center items-center gap-2">
+                <span class="text-xl font-black">＋</span> 切断面を追加
+            </button>
+        </div>
+        
+    </div>
+
+    <!-- Hint/Status (Center Top) -->
+    <div class="overlay top-4 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
+        <div id="message-box" class="bg-blue-900/90 px-6 py-3 rounded-full text-cyan-100 font-bold shadow-xl hidden backdrop-blur-md border border-blue-400/30"></div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Global Variables ---
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        let cubeGroup; // Group containing the box and its edges
+        let selectedPoints = []; 
+        let currentCutMesh = null; 
+        let storedCuts = []; 
+        let clickableObjects = []; 
+        let cursorGuideMesh = null; 
+        
+        let draggedPoint = null; 
+
+        // Current Dimensions (Width, Height, Depth)
+        let currentDims = { x: 6, y: 6, z: 6 };
+
+        // Geometry Constants
+        const EDGE_THICKNESS = 0.05;
+        const HIT_RADIUS = 0.3; 
+        const VERTEX_RADIUS = 0.15; 
+
+        // Will be populated by updateVertices()
+        let vertices = [];
+
+        // Pairs of vertex indices that form edges
+        const edgeIndices = [
+            [0, 1], [1, 2], [2, 3], [3, 0], // Top
+            [4, 5], [5, 6], [6, 7], [7, 4], // Bottom
+            [0, 4], [1, 5], [2, 6], [3, 7]  // Vertical
+        ];
+
+        init();
+        animate();
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222222);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(10, 8, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            // Initial Build
+            updateVertices();
+            buildCube();
+
+            const cursorGeo = new THREE.SphereGeometry(0.1, 16, 16);
+            const cursorMat = new THREE.MeshBasicMaterial({ 
+                color: 0xff3333, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false
+            });
+            cursorGuideMesh = new THREE.Mesh(cursorGeo, cursorMat);
+            cursorGuideMesh.visible = false;
+            cursorGuideMesh.renderOrder = 999; 
+            scene.add(cursorGuideMesh);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            raycaster.params.Line.threshold = 0.2;
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+            
+            window.resetAll = resetAll;
+            window.performCut = performCut;
+            window.addNewCut = addNewCut;
+            window.updateBoxDimensions = updateBoxDimensions;
+        }
+
+        function updateVertices() {
+            const hx = currentDims.x / 2;
+            const hy = currentDims.height / 2; // Notice: UI says "Height", logic uses 'y'
+            // Wait, let's stick to consistent naming: x=Width(横), y=Height(高さ), z=Depth(縦)
+            const w = currentDims.x / 2;
+            const h = currentDims.y / 2;
+            const d = currentDims.z / 2;
+
+            vertices = [
+                new THREE.Vector3(-w, h, d),  // 0: Top-Left-Front
+                new THREE.Vector3(w, h, d),   // 1: Top-Right-Front
+                new THREE.Vector3(w, h, -d),  // 2: Top-Right-Back
+                new THREE.Vector3(-w, h, -d), // 3: Top-Left-Back
+                new THREE.Vector3(-w, -h, d), // 4: Bottom-Left-Front
+                new THREE.Vector3(w, -h, d),  // 5: Bottom-Right-Front
+                new THREE.Vector3(w, -h, -d), // 6: Bottom-Right-Back
+                new THREE.Vector3(-w, -h, -d) // 7: Bottom-Left-Back
+            ];
+        }
+
+        function updateBoxDimensions() {
+            const w = parseFloat(document.getElementById('input-width').value);
+            const h = parseFloat(document.getElementById('input-height').value);
+            const d = parseFloat(document.getElementById('input-depth').value);
+
+            if (w <= 0 || h <= 0 || d <= 0) {
+                showMessage("サイズは正の数を入力してください");
+                return;
+            }
+
+            currentDims = { x: w, y: h, z: d };
+            
+            // Full reset required when geometry changes
+            resetAll();
+            
+            // Rebuild geometry
+            updateVertices();
+            buildCube();
+            
+            showMessage(`サイズを更新しました: 縦${d}, 横${w}, 高さ${h}`);
+        }
+
+        function buildCube() {
+            // Cleanup previous cube if exists
+            if (cubeGroup) {
+                scene.remove(cubeGroup);
+                // Also need to dispose geometries/materials properly in a real app, 
+                // but for this simple app, GC will likely handle it eventually.
+            }
+            clickableObjects = [];
+
+            cubeGroup = new THREE.Group();
+            scene.add(cubeGroup);
+
+            // A. The Transparent Box
+            const geometry = new THREE.BoxGeometry(currentDims.x, currentDims.y, currentDims.z);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x44aaff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false
+            });
+            const box = new THREE.Mesh(geometry, material);
+            cubeGroup.add(box);
+
+            const edgeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            const tickMat = new THREE.MeshBasicMaterial({ color: 0x888888 });
+            const midTickMat = new THREE.MeshBasicMaterial({ color: 0x9DCCE0 });
+
+            edgeIndices.forEach(pair => {
+                const start = vertices[pair[0]];
+                const end = vertices[pair[1]];
+                const distance = start.distanceTo(end);
+                const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                
+                // 1. Visual Edge
+                const cylinderGeo = new THREE.CylinderGeometry(EDGE_THICKNESS, EDGE_THICKNESS, distance, 8);
+                const edgeMesh = new THREE.Mesh(cylinderGeo, edgeMat);
+                edgeMesh.position.copy(start).add(end).multiplyScalar(0.5);
+                edgeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+                cubeGroup.add(edgeMesh);
+
+                // 2. Hit Box
+                const hitGeo = new THREE.CylinderGeometry(HIT_RADIUS, HIT_RADIUS, distance, 8);
+                const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+                hitMesh.position.copy(edgeMesh.position);
+                hitMesh.quaternion.copy(edgeMesh.quaternion);
+                hitMesh.userData = { isEdge: true, v1: start, v2: end };
+                cubeGroup.add(hitMesh);
+                clickableObjects.push(hitMesh);
+
+                // 3. Ticks
+                const divisions = 12;
+                const tickGeo = new THREE.CylinderGeometry(EDGE_THICKNESS * 1.5, EDGE_THICKNESS * 1.5, 0.02, 8);
+                for (let i = 1; i < divisions; i++) {
+                    const t = i / divisions;
+                    const pos = new THREE.Vector3().lerpVectors(start, end, t);
+                    const mat = (i === divisions / 2) ? midTickMat : tickMat;
+                    const tick = new THREE.Mesh(tickGeo, mat);
+                    tick.position.copy(pos);
+                    tick.quaternion.copy(edgeMesh.quaternion);
+                    cubeGroup.add(tick);
+                }
+            });
+
+            // Vertices
+            const cornerGeo = new THREE.SphereGeometry(VERTEX_RADIUS, 16, 16);
+            const cornerMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+            const cornerHitGeo = new THREE.SphereGeometry(HIT_RADIUS, 16, 16);
+
+            vertices.forEach(v => {
+                const s = new THREE.Mesh(cornerGeo, cornerMat);
+                s.position.copy(v);
+                cubeGroup.add(s);
+
+                const hitS = new THREE.Mesh(cornerHitGeo, hitMat);
+                hitS.position.copy(v);
+                hitS.userData = { isVertex: true, position: v };
+                cubeGroup.add(hitS);
+                clickableObjects.push(hitS);
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onPointerMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const canvas = document.getElementById('canvas-container');
+
+            if (draggedPoint) {
+                const intersects = raycaster.intersectObjects(clickableObjects);
+                if (intersects.length > 0) {
+                    const snapPos = getSnapPosition(intersects[0]);
+                    draggedPoint.mesh.position.copy(snapPos);
+                    draggedPoint.position.copy(snapPos);
+                }
+                return;
+            }
+
+            const markers = selectedPoints.map(p => p.mesh);
+            const markerIntersects = raycaster.intersectObjects(markers);
+            
+            if (markerIntersects.length > 0) {
+                canvas.classList.add('grabbing');
+                canvas.classList.remove('cursor-none');
+                cursorGuideMesh.visible = false;
+                return;
+            } else {
+                canvas.classList.remove('grabbing');
+            }
+
+            const intersects = raycaster.intersectObjects(clickableObjects);
+            if (intersects.length > 0 && selectedPoints.length < 3) {
+                const snapPos = getSnapPosition(intersects[0]);
+                cursorGuideMesh.position.copy(snapPos);
+                cursorGuideMesh.visible = true;
+                canvas.classList.add('cursor-none');
+            } else {
+                cursorGuideMesh.visible = false;
+                canvas.classList.remove('cursor-none');
+            }
+        }
+
+        function onPointerDown(event) {
+            if (event.button !== 0) return;
+            if (event.target.closest('.interactive')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const markers = selectedPoints.map(p => p.mesh);
+            const markerIntersects = raycaster.intersectObjects(markers);
+
+            if (markerIntersects.length > 0) {
+                const clickedMesh = markerIntersects[0].object;
+                draggedPoint = selectedPoints.find(p => p.mesh === clickedMesh);
+                controls.enabled = false;
+                
+                if (currentCutMesh) {
+                    scene.remove(currentCutMesh);
+                    currentCutMesh = null;
+                    document.getElementById('btn-add-cut').disabled = true; 
+                }
+                return;
+            }
+
+            const intersects = raycaster.intersectObjects(clickableObjects);
+            if (intersects.length > 0) {
+                if (selectedPoints.length >= 3) {
+                    showMessage("既に3点が選択されています。点をドラッグするか「切断」してください。");
+                    return;
+                }
+                const snapPos = getSnapPosition(intersects[0]);
+                addPoint(snapPos);
+            }
+        }
+
+        function onPointerUp(event) {
+            if (draggedPoint) {
+                draggedPoint = null;
+                controls.enabled = true;
+            }
+        }
+
+        function getSnapPosition(hit) {
+            let snapPos = new THREE.Vector3();
+            if (hit.object.userData.isVertex) {
+                snapPos.copy(hit.object.userData.position);
+            } else if (hit.object.userData.isEdge) {
+                const v1 = hit.object.userData.v1;
+                const v2 = hit.object.userData.v2;
+                const lineVec = new THREE.Vector3().subVectors(v2, v1);
+                snapPos.subVectors(hit.point, v1).projectOnVector(lineVec).add(v1);
+            }
+            return snapPos;
+        }
+
+        function addPoint(position) {
+            for (let p of selectedPoints) {
+                if (p.position.distanceTo(position) < 0.01) return;
+            }
+            const markerGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const markerMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 });
+            const marker = new THREE.Mesh(markerGeo, markerMat);
+            marker.position.copy(position);
+            scene.add(marker);
+            selectedPoints.push({ mesh: marker, position: position });
+            updateUI();
+        }
+
+        function resetAll() {
+            selectedPoints.forEach(p => scene.remove(p.mesh));
+            selectedPoints = [];
+            
+            if (currentCutMesh) {
+                scene.remove(currentCutMesh);
+                currentCutMesh = null;
+            }
+
+            storedCuts.forEach(mesh => scene.remove(mesh));
+            storedCuts = [];
+
+            document.getElementById('btn-add-cut').disabled = true;
+            updateUI();
+            showMessage("全てリセットしました");
+        }
+
+        function performCut() {
+            if (selectedPoints.length !== 3) {
+                showMessage("3点を指定してから「切断」を押してください。");
+                return;
+            }
+            if (currentCutMesh) {
+                scene.remove(currentCutMesh);
+                currentCutMesh = null;
+            }
+            calculateAndDrawSection();
+        }
+
+        function addNewCut() {
+            if (!currentCutMesh) return;
+
+            storedCuts.push(currentCutMesh);
+            currentCutMesh = null;
+
+            selectedPoints.forEach(p => scene.remove(p.mesh));
+            selectedPoints = [];
+
+            updateUI();
+            document.getElementById('btn-add-cut').disabled = true;
+            showMessage("切断面を追加しました。次の3点を選択してください。");
+        }
+
+        function updateUI() {
+            document.getElementById('point-count').innerText = selectedPoints.length;
+        }
+
+        function showMessage(msg) {
+            const el = document.getElementById('message-box');
+            if (!msg) {
+                el.classList.add('hidden');
+            } else {
+                el.innerText = msg;
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 3000);
+            }
+        }
+
+        function calculateAndDrawSection() {
+            const p1 = selectedPoints[0].position;
+            const p2 = selectedPoints[1].position;
+            const p3 = selectedPoints[2].position;
+
+            const v12 = new THREE.Vector3().subVectors(p2, p1);
+            const v13 = new THREE.Vector3().subVectors(p3, p1);
+            const normal = new THREE.Vector3().crossVectors(v12, v13).normalize();
+
+            if (normal.lengthSq() === 0) {
+                showMessage("エラー: 3点が一直線上にあります。");
+                return;
+            }
+
+            const planeConstant = normal.dot(p1);
+            const intersectionPoints = [];
+
+            edgeIndices.forEach(pair => {
+                const A = vertices[pair[0]];
+                const B = vertices[pair[1]];
+                const BA = new THREE.Vector3().subVectors(B, A);
+                const denom = normal.dot(BA);
+
+                if (Math.abs(denom) > 1e-6) {
+                    const t = (planeConstant - normal.dot(A)) / denom;
+                    if (t >= -0.0001 && t <= 1.0001) {
+                        const P = new THREE.Vector3().copy(BA).multiplyScalar(t).add(A);
+                        let exists = false;
+                        for (let existing of intersectionPoints) {
+                            if (existing.distanceTo(P) < 0.001) { exists = true; break; }
+                        }
+                        if (!exists) intersectionPoints.push(P);
+                    }
+                }
+            });
+
+            if (intersectionPoints.length < 3) {
+                showMessage("エラー: 切断面を形成できませんでした。");
+                return;
+            }
+
+            const centroid = new THREE.Vector3();
+            intersectionPoints.forEach(p => centroid.add(p));
+            centroid.divideScalar(intersectionPoints.length);
+
+            const uAxis = new THREE.Vector3().subVectors(intersectionPoints[0], centroid).normalize();
+            const vAxis = new THREE.Vector3().crossVectors(normal, uAxis).normalize();
+
+            intersectionPoints.sort((a, b) => {
+                const vecA = new THREE.Vector3().subVectors(a, centroid);
+                const vecB = new THREE.Vector3().subVectors(b, centroid);
+                return Math.atan2(vecA.dot(vAxis), vecA.dot(uAxis)) - Math.atan2(vecB.dot(vAxis), vecB.dot(uAxis));
+            });
+
+            const verticesArray = [];
+            intersectionPoints.forEach(p => verticesArray.push(p.x, p.y, p.z));
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(verticesArray, 3));
+
+            const indices = [];
+            for (let i = 1; i < intersectionPoints.length - 1; i++) {
+                indices.push(0, i, i + 1);
+            }
+            geo.setIndex(indices);
+            geo.computeVertexNormals();
+
+            // 8 colors loop (45 deg)
+            const hue = (storedCuts.length * 45) % 360;
+            const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+
+            const mat = new THREE.MeshBasicMaterial({ 
+                color: color, side: THREE.DoubleSide, transparent: true, opacity: 0.6, depthTest: true
+            });
+
+            currentCutMesh = new THREE.Mesh(geo, mat);
+            
+            const edgesGeo = new THREE.EdgesGeometry(geo);
+            const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+            const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+            currentCutMesh.add(edges);
+
+            scene.add(currentCutMesh);
+            
+            document.getElementById('btn-add-cut').disabled = false;
+            showMessage("切断面を作成しました！");
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
